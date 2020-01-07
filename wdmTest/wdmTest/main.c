@@ -3,6 +3,8 @@
 
 #include "main.h"
 
+
+
 NTSTATUS DriverEntry(
 	PDRIVER_OBJECT pDriverObject,
 	PUNICODE_STRING pRegstryPath
@@ -102,6 +104,8 @@ IoControlDispatch(
 
 	PWCHAR buf = NULL;
 	PIO_STACK_LOCATION  irpSp;
+	int bIOCtl = FALSE;
+	ULONG ctlCode = 0;
 	pIrp->IoStatus.Information = 0;
 	irpSp = IoGetCurrentIrpStackLocation(pIrp);
 	
@@ -126,8 +130,57 @@ IoControlDispatch(
 			pIrp->IoStatus.Information = irpSp->Parameters.Write.Length;
 		}
 	}
+	else if (irpSp->MajorFunction == IRP_MJ_DEVICE_CONTROL)
+	{
+		//Get IoControl Code from irp stack.
+		ctlCode = irpSp->Parameters.DeviceIoControl.IoControlCode;
+		switch (ctlCode)
+		{
+		case IOCTL_MY_CTL:
+			KdPrint(("IRP_MJ_DEVICE_CONTROL IOCTL_MY_CTL  %x <==\n", ctlCode));
+			
+			//exceptions
+			if (irpSp->Parameters.DeviceIoControl.InputBufferLength == 0)
+			{
+				KdPrint(("IRP_MJ_DEVICE_CONTROL IOCTL_MY_CTL  Parameters.DeviceIoControl.InputBufferLength 0 <==\n"));
+				break;
+			}
+			if (irpSp->Parameters.DeviceIoControl.OutputBufferLength == 0)
+			{
+				KdPrint(("IRP_MJ_DEVICE_CONTROL IOCTL_MY_CTL  Parameters.DeviceIoControl.OutputBufferLength 0 <==\n"));
+				break;
+			}
+			if (!pIrp->AssociatedIrp.SystemBuffer)
+			{
+				KdPrint(("IRP_MJ_DEVICE_CONTROL IOCTL_MY_CTL !pIrp->AssociatedIrp.SystemBuffer <==\n"));
+				break;
+			}
 
-	KdPrint(("IoControlDispatch  %x <==\n", irpSp->MajorFunction));
+			buf = ExAllocatePoolWithTag(NonPagedPool, irpSp->Parameters.DeviceIoControl.InputBufferLength, ALLOC_TAG);
+			if (buf)
+			{
+				//copy buffer
+				RtlCopyMemory(buf, pIrp->AssociatedIrp.SystemBuffer, irpSp->Parameters.DeviceIoControl.InputBufferLength);
+				//print
+				KdPrint(("IoControlDispatch IOCTL_MY_CTL Length:%lu %S<==\n", irpSp->Parameters.DeviceIoControl.InputBufferLength, buf));
+				bIOCtl = TRUE;
+				ExFreePool(buf);
+			}
+			//copy buffer
+			
+			RtlCopyMemory( pIrp->AssociatedIrp.SystemBuffer, &bIOCtl ,sizeof(int));
+			pIrp->IoStatus.Information = sizeof(int);
+			//print
+			KdPrint(("IoControlDispatch IOCTL_MY_CTL set output buffer:%d <==\n", bIOCtl));
+
+
+			break;
+		default:
+			KdPrint(("IRP_MJ_DEVICE_CONTROL unknown CTL  %x <==\n", ctlCode));
+			break;
+		}
+	}
+
 
 	pIrp->IoStatus.Status = STATUS_SUCCESS;
 	IoCompleteRequest(pIrp, IO_NO_INCREMENT);

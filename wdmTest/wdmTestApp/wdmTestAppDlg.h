@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <devioctl.h>
+#define IOCTL_MY_CTL CTL_CODE(FILE_DEVICE_UNKNOWN, 0x4000, METHOD_BUFFERED , FILE_ANY_ACCESS)
 
 // CwdmTestAppDlg dialog
 class CwdmTestAppDlg : public CDialogEx
@@ -38,4 +40,5 @@ public:
 	HANDLE m_hDevice;
 	CEdit m_ctrlWriteEdit;
 	afx_msg void OnBnClickedButton2();
+	afx_msg void OnBnClickedButton3();
 };

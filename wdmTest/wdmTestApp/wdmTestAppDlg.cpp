@@ -69,6 +69,7 @@ BEGIN_MESSAGE_MAP(CwdmTestAppDlg, CDialogEx)
 	ON_WM_QUERYDRAGICON()
 	ON_BN_CLICKED(IDC_BUTTON1, &CwdmTestAppDlg::OnBnClickedButton1)
 	ON_BN_CLICKED(IDC_BUTTON2, &CwdmTestAppDlg::OnBnClickedButton2)
+	ON_BN_CLICKED(IDC_BUTTON3, &CwdmTestAppDlg::OnBnClickedButton3)
 END_MESSAGE_MAP()
 
 
@@ -205,5 +206,45 @@ void CwdmTestAppDlg::OnBnClickedButton2()
 		delete[] pBuf;
 		AfxMessageBox(_T("write!!!"));
 	}
+
+}
+
+
+void CwdmTestAppDlg::OnBnClickedButton3()
+{
+	// TODO: Add your control notification handler code here
+	if (m_DeviceFile.m_hFile == CFile::hFileNull)
+	{
+		return;
+	}
+	if (m_ctrlWriteEdit.GetWindowTextLengthW())
+	{
+		CString str;
+		m_ctrlWriteEdit.GetWindowText(str);
+		DWORD dwAlloc = str.GetLength() + 1;
+		PWCHAR pBuf = new WCHAR[dwAlloc];
+		ZeroMemory(pBuf, sizeof(WCHAR) * dwAlloc);
+		wcsncpy_s(pBuf, dwAlloc, str.GetBuffer(), _TRUNCATE);
+
+		m_DeviceFile.Write(pBuf, sizeof(WCHAR) * dwAlloc);
+		BOOL bIoCTL = FALSE;
+		DWORD dwRetBytes = 0;
+		if (DeviceIoControl(m_DeviceFile.m_hFile, IOCTL_MY_CTL, pBuf, sizeof(WCHAR) * dwAlloc, &bIoCTL, sizeof(BOOL), &dwRetBytes, NULL))
+		{
+			CString strMsg;
+			strMsg.Format(_T("DeviceIoControl IOCTL_MY_CTL success !!! return %s"), bIoCTL ? _T("TRUE") : _T("FALSE"));
+			AfxMessageBox(strMsg);
+		}
+		else
+		{
+			AfxMessageBox(_T("DeviceIoControl IOCTL_MY_CTL fail!!!!!! !!!"));
+		}
+
+
+		delete[] pBuf;
+		
+	}
+
+	
 
 }
